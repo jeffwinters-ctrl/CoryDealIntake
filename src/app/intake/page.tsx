@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Loader2, CheckCircle } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import type { CollateralType } from '@/types';
 import { COLLATERAL_LABELS } from '@/types';
 
@@ -19,6 +18,7 @@ interface IntakeForm {
   loan_amount: string;
   loan_purpose: string;
   collateral_type: CollateralType | '';
+  secondary_collateral_type: CollateralType | '';
   collateral_description: string;
   deal_description: string;
 }
@@ -32,9 +32,16 @@ const INITIAL_FORM: IntakeForm = {
   loan_amount: '',
   loan_purpose: '',
   collateral_type: '',
+  secondary_collateral_type: '',
   collateral_description: '',
   deal_description: '',
 };
+
+function formatNumberWithCommas(value: string): string {
+  const digits = value.replace(/[^0-9]/g, '');
+  if (!digits) return '';
+  return Number(digits).toLocaleString('en-US');
+}
 
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
@@ -85,40 +92,31 @@ export default function IntakePage() {
     setError('');
 
     try {
-      const supabase = createClient();
-
-      const { data: borrower, error: borrowerErr } = await supabase
-        .from('borrowers')
-        .insert({
+      const res = await fetch('/api/intake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           contact_name: form.contact_name.trim(),
           company_name: form.company_name.trim() || null,
           email: form.email.trim().toLowerCase(),
           phone: form.phone.trim() || null,
           state: form.state || null,
-        })
-        .select()
-        .single();
-
-      if (borrowerErr) throw borrowerErr;
-
-      const loanAmount = Number(form.loan_amount.replace(/[,$\s]/g, ''));
-
-      const { data: deal, error: dealErr } = await supabase
-        .from('deals')
-        .insert({
-          borrower_id: borrower.id,
-          loan_amount: loanAmount,
+          loan_amount: Number(form.loan_amount.replace(/[,$\s]/g, '')),
           loan_purpose: form.loan_purpose.trim(),
           collateral_type: form.collateral_type,
+          secondary_collateral_type: form.secondary_collateral_type || null,
           collateral_description: form.collateral_description.trim() || null,
           deal_description: form.deal_description.trim() || null,
-        })
-        .select()
-        .single();
+        }),
+      });
 
-      if (dealErr) throw dealErr;
+      const data = await res.json();
 
-      router.push(`/intake/confirmation?ref=${deal.reference_number}&token=${deal.upload_token}`);
+      if (!res.ok) {
+        throw new Error(data.error || 'Something went wrong. Please try again.');
+      }
+
+      router.push(`/intake/confirmation?ref=${data.reference_number}&token=${data.upload_token}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
       setError(message);
@@ -261,7 +259,7 @@ export default function IntakePage() {
                   className="input-base pl-8"
                   placeholder="1,000,000"
                   value={form.loan_amount}
-                  onChange={(e) => updateField('loan_amount', e.target.value)}
+                  onChange={(e) => updateField('loan_amount', formatNumberWithCommas(e.target.value))}
                 />
               </div>
             </div>
@@ -287,6 +285,21 @@ export default function IntakePage() {
                 onChange={(e) => updateField('collateral_type', e.target.value)}
               >
                 <option value="">Select collateral type</option>
+                {Object.entries(COLLATERAL_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                Secondary Collateral Type
+              </label>
+              <select
+                className="input-base"
+                value={form.secondary_collateral_type}
+                onChange={(e) => updateField('secondary_collateral_type', e.target.value)}
+              >
+                <option value="">Select secondary collateral (optional)</option>
                 {Object.entries(COLLATERAL_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
                 ))}
@@ -358,11 +371,19 @@ export default function IntakePage() {
                   </p>
                 </div>
                 <div>
-                  <span className="text-slate-500">Collateral Type</span>
+                  <span className="text-slate-500">Primary Collateral</span>
                   <p className="text-slate-200">
                     {form.collateral_type ? COLLATERAL_LABELS[form.collateral_type] : '—'}
                   </p>
                 </div>
+                {form.secondary_collateral_type && (
+                  <div>
+                    <span className="text-slate-500">Secondary Collateral</span>
+                    <p className="text-slate-200">
+                      {COLLATERAL_LABELS[form.secondary_collateral_type]}
+                    </p>
+                  </div>
+                )}
                 <div className="col-span-2">
                   <span className="text-slate-500">Loan Purpose</span>
                   <p className="text-slate-200">{form.loan_purpose}</p>

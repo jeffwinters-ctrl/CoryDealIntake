@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
       loan_amount,
       loan_purpose,
       collateral_type,
+      secondary_collateral_type,
       collateral_description,
       deal_description,
     } = body;
@@ -42,16 +43,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: borrowerErr.message }, { status: 500 });
     }
 
+    const dealInsert: Record<string, unknown> = {
+      borrower_id: borrower.id,
+      loan_amount: Number(String(loan_amount).replace(/[,$\s]/g, '')),
+      loan_purpose: loan_purpose.trim(),
+      collateral_type,
+      collateral_description: collateral_description?.trim() || null,
+      deal_description: deal_description?.trim() || null,
+    };
+    if (secondary_collateral_type) {
+      dealInsert.secondary_collateral_type = secondary_collateral_type;
+    }
+
     const { data: deal, error: dealErr } = await supabase
       .from('deals')
-      .insert({
-        borrower_id: borrower.id,
-        loan_amount: Number(String(loan_amount).replace(/[,$\s]/g, '')),
-        loan_purpose: loan_purpose.trim(),
-        collateral_type,
-        collateral_description: collateral_description?.trim() || null,
-        deal_description: deal_description?.trim() || null,
-      })
+      .insert(dealInsert)
       .select()
       .single();
 
