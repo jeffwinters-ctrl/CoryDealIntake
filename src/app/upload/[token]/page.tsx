@@ -22,7 +22,7 @@ export default function UploadPage() {
     const supabase = createClient();
     const { data } = await supabase
       .from('deals')
-      .select('*, borrower:borrowers(*)')
+      .select('*')
       .eq('upload_token', token)
       .single();
 
