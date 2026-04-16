@@ -1,16 +1,22 @@
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { redirect } from 'next/navigation';
 import { KanbanBoard } from '@/components/dashboard/KanbanBoard';
 import type { Deal } from '@/types';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
 
-  const { data: deals } = await supabase
+  const admin = createAdminClient();
+
+  const { data: deals } = await admin
     .from('deals')
     .select('*, borrower:borrowers(*), score:deal_scores(*)')
     .order('created_at', { ascending: false });
 
-  const { data: users } = await supabase
+  const { data: users } = await admin
     .from('users')
     .select('*')
     .eq('is_active', true);

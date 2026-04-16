@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { ArrowLeft } from 'lucide-react';
 import { STAGE_LABELS } from '@/types';
 import { getStageBadgeColor, cn } from '@/lib/utils';
@@ -13,7 +13,7 @@ interface Props {
 
 export default async function ScoringPage({ params }: Props) {
   const { id } = await params;
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: deal } = await supabase
     .from('deals')

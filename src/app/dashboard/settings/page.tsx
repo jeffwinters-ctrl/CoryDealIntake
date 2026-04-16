@@ -1,19 +1,21 @@
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { User } from '@/types';
 import { ROLE_LABELS } from '@/types';
 import { UserManagement } from '@/components/dashboard/UserManagement';
 
 export default async function SettingsPage() {
   const supabase = await createClient();
+  const admin = createAdminClient();
 
   const { data: currentUser } = await supabase.auth.getUser();
-  const { data: profile } = await supabase
+  const { data: profile } = await admin
     .from('users')
     .select('*')
     .eq('id', currentUser?.user?.id)
     .single();
 
-  const { data: allUsers } = await supabase
+  const { data: allUsers } = await admin
     .from('users')
     .select('*')
     .order('created_at');

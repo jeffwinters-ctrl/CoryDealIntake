@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { ArrowLeft } from 'lucide-react';
 import { DocumentManager } from '@/components/dashboard/DocumentManager';
 import type { Deal, Document as DocType } from '@/types';
@@ -11,7 +11,7 @@ interface Props {
 
 export default async function DocumentsPage({ params }: Props) {
   const { id } = await params;
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: deal } = await supabase
     .from('deals')

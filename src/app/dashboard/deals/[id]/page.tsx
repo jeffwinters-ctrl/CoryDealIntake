@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { Deal, DealNote, DealStageHistory, ChecklistItem, Document as DocType } from '@/types';
 import { STAGE_LABELS, COLLATERAL_LABELS, STAGE_ORDER } from '@/types';
 import { formatCurrency, formatDate, formatDateTime, getStageBadgeColor, getScoreColor, cn } from '@/lib/utils';
@@ -17,7 +17,7 @@ interface Props {
 
 export default async function DealDetailPage({ params }: Props) {
   const { id } = await params;
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: deal } = await supabase
     .from('deals')
