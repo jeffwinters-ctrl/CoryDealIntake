@@ -43,6 +43,13 @@ function formatNumberWithCommas(value: string): string {
   return Number(digits).toLocaleString('en-US');
 }
 
+function formatPhoneNumber(value: string): string {
+  const digits = value.replace(/[^0-9]/g, '').slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
   'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
@@ -66,6 +73,12 @@ export default function IntakePage() {
     if (step === 0) {
       if (!form.contact_name.trim()) { setError('Please enter your name.'); return false; }
       if (!form.email.trim() || !form.email.includes('@')) { setError('Please enter a valid email.'); return false; }
+      if (form.phone.trim()) {
+        const digits = form.phone.replace(/[^0-9]/g, '');
+        if (digits.length < 10 || digits.length > 11) {
+          setError('Please enter a valid phone number (10 digits).'); return false;
+        }
+      }
     }
     if (step === 1) {
       if (!form.loan_amount.trim() || isNaN(Number(form.loan_amount.replace(/[,$]/g, '')))) {
@@ -225,7 +238,7 @@ export default function IntakePage() {
                   className="input-base"
                   placeholder="(555) 123-4567"
                   value={form.phone}
-                  onChange={(e) => updateField('phone', e.target.value)}
+                  onChange={(e) => updateField('phone', formatPhoneNumber(e.target.value))}
                 />
               </div>
             </div>

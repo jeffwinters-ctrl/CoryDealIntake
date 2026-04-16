@@ -88,6 +88,7 @@ CREATE TABLE deals (
   loan_amount NUMERIC(14,2) NOT NULL,
   loan_purpose TEXT NOT NULL,
   collateral_type collateral_type NOT NULL,
+  secondary_collateral_type collateral_type,
   collateral_description TEXT,
   deal_description TEXT,
   interest_rate NUMERIC(5,2),
