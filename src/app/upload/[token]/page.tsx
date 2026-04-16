@@ -228,6 +228,28 @@ export default function UploadPage() {
             </li>
           </ul>
         </div>
+
+        {/* Done Section */}
+        <div className="mt-10 pt-8 border-t border-brand-border text-center">
+          <CheckCircle className="w-10 h-10 text-green-400 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-white mb-2">
+            {docs.length > 0 ? "You're All Set!" : 'Upload Complete?'}
+          </h3>
+          <p className="text-slate-400 text-sm mb-6">
+            {docs.length > 0
+              ? `You've uploaded ${docs.length} document${docs.length > 1 ? 's' : ''}. Our team will review your submission and be in touch within 24-48 hours.`
+              : 'You can upload documents now or come back later using this same link.'}
+          </p>
+          <p className="text-slate-500 text-xs mb-6">
+            Bookmark this page — you can return anytime to upload additional documents.
+          </p>
+          <a
+            href="/"
+            className="btn-primary inline-flex items-center gap-2 px-8 py-3"
+          >
+            Done — Return to Visionary Capital
+          </a>
+        </div>
       </main>
     </div>
   );
