@@ -3,38 +3,46 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, X } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
-import type { Deal, Document as DocType } from '@/types';
 import { COLLATERAL_LABELS } from '@/types';
+import type { CollateralType } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+
+interface DealInfo {
+  id: string;
+  reference_number: string;
+  loan_amount: number;
+  collateral_type: CollateralType;
+  secondary_collateral_type: CollateralType | null;
+  upload_token: string;
+}
+
+interface DocInfo {
+  id: string;
+  file_name: string;
+  file_size: number | null;
+  created_at: string;
+}
 
 export default function UploadPage() {
   const params = useParams();
   const token = params.token as string;
-  const [deal, setDeal] = useState<Deal | null>(null);
-  const [docs, setDocs] = useState<DocType[]>([]);
+  const [deal, setDeal] = useState<DealInfo | null>(null);
+  const [docs, setDocs] = useState<DocInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   const loadDeal = useCallback(async () => {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from('deals')
-      .select('*')
-      .eq('upload_token', token)
-      .single();
-
-    if (data) {
-      setDeal(data as Deal);
-      const { data: existingDocs } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('deal_id', data.id)
-        .eq('uploaded_by_borrower', true)
-        .order('created_at', { ascending: false });
-      setDocs((existingDocs as DocType[]) || []);
+    try {
+      const res = await fetch(`/api/deal-by-token?token=${encodeURIComponent(token)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setDeal(data.deal);
+        setDocs(data.documents || []);
+      }
+    } catch {
+      // deal stays null
     }
     setLoading(false);
   }, [token]);
@@ -51,37 +59,24 @@ export default function UploadPage() {
     setError('');
     setSuccess('');
 
-    const supabase = createClient();
-
+    let hadError = false;
     for (const file of Array.from(files)) {
-      const filePath = `${deal.id}/${Date.now()}-${file.name}`;
+      const formData = new FormData();
+      formData.append('token', token);
+      formData.append('file', file);
 
-      const { error: uploadErr } = await supabase.storage
-        .from('deal-documents')
-        .upload(filePath, file);
-
-      if (uploadErr) {
-        setError(`Failed to upload ${file.name}: ${uploadErr.message}`);
+      const res = await fetch('/api/upload-doc', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(`Failed to upload ${file.name}: ${data.error || 'Unknown error'}`);
+        hadError = true;
         continue;
-      }
-
-      const { error: dbErr } = await supabase.from('documents').insert({
-        deal_id: deal.id,
-        file_name: file.name,
-        file_path: filePath,
-        file_size: file.size,
-        mime_type: file.type,
-        category: 'Borrower Upload',
-        uploaded_by_borrower: true,
-        status: 'received',
-      });
-
-      if (dbErr) {
-        setError(`Failed to save ${file.name} metadata.`);
       }
     }
 
-    setSuccess('Documents uploaded successfully.');
+    if (!hadError) {
+      setSuccess('Documents uploaded successfully.');
+    }
     await loadDeal();
     setUploading(false);
     e.target.value = '';
@@ -124,7 +119,6 @@ export default function UploadPage() {
           Reference: <span className="text-brand-gold font-mono">{deal.reference_number}</span>
         </p>
 
-        {/* Deal Summary */}
         <div className="card mb-8">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
@@ -132,9 +126,15 @@ export default function UploadPage() {
               <p className="text-slate-200 font-semibold">{formatCurrency(deal.loan_amount)}</p>
             </div>
             <div>
-              <span className="text-slate-500">Collateral</span>
+              <span className="text-slate-500">Primary Collateral</span>
               <p className="text-slate-200">{COLLATERAL_LABELS[deal.collateral_type]}</p>
             </div>
+            {deal.secondary_collateral_type && (
+              <div>
+                <span className="text-slate-500">Secondary Collateral</span>
+                <p className="text-slate-200">{COLLATERAL_LABELS[deal.secondary_collateral_type]}</p>
+              </div>
+            )}
           </div>
         </div>
 
